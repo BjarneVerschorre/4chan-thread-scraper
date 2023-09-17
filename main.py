@@ -78,10 +78,12 @@ async def main():
     thread_name_match = re.match(r"[a-zA-Z0-9 -]+", thread_name)
 
     if thread_name_match:
-        thread_name = thread_name_match.group(0).strip()
+        thread_folder_name = thread_name_match.group(0).strip()
     else:
-        thread_name = "Unnamed thread"
+        thread_folder_name = "Unnamed thread"
  
+    print(f"Scraping \"{thread_name}\"")
+
     thread_posts:list[THREAD_POST] = thread_data.get("posts", [])
 
     attachment_urls: list[URL] = []
@@ -91,7 +93,7 @@ async def main():
         attachment_urls.append(attachment_url(board, str(post["tim"]) + post["ext"]))
 
     print(f"Found {len(attachment_urls)} attachments")
-    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
+    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_folder_name}"
 
     os.makedirs(path, exist_ok=True)
     
