@@ -107,6 +107,15 @@ async def main():
         tasks = [download_attachment(client, path, attachment_url) for attachment_url in attachment_urls]
         await asyncio.gather(*tasks)
 
+    # Wait until all threads are done
+    for thread in threading.enumerate():
+        if thread is threading.main_thread():
+            continue
+        if thread.name.startswith("asyncio_"):
+            continue
+
+        thread.join()
+
     print("\nDone")
 
 
