@@ -82,6 +82,7 @@ async def main():
     thread_name:str = initial_post.get("sub", initial_post.get("com", "Unnamed thread"))
     thread_name = re.sub(r"\\/:\*\?<>\|", "", thread_name)
  
+    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
     print(f"Scraping \"{thread_name}\"")
 
     thread_posts:list[THREAD_POST] = thread_data.get("posts", [])
@@ -90,10 +91,15 @@ async def main():
     for post in thread_posts:
         if not "tim" in post or not "ext" in post:
             continue
-        attachment_urls.append(attachment_url(board, str(post["tim"]) + post["ext"]))
 
-    print(f"Found {len(attachment_urls)} attachments")
-    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
+        file_name = str(post["tim"]) + post["ext"]
+
+        if os.path.isfile(f"{path}/{file_name}"):
+            continue
+
+        attachment_urls.append(attachment_url(board, file_name))
+
+    print(f"Found {len(attachment_urls)} (new) attachment{'s' if len(attachment_urls) != 1 else ''}")
 
     os.makedirs(path, exist_ok=True)
     
