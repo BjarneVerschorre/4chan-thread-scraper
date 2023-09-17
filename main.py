@@ -54,7 +54,11 @@ def save_attachment(attachment_data: bytes, path:str, file_name: str):
     print(f"\rDownloaded \"{file_name}\"", end="")
 
 async def download_attachment(client: httpx.AsyncClient, path:str, attachment_url:URL):
-    res = await client.get(attachment_url, timeout=15)
+    try:
+        res = await client.get(attachment_url, timeout=15)
+    except httpx.ReadTimeout:
+        print(f"Failed to download \"{attachment_url}\"")
+        return
 
     if res.status_code != 200:
         print(f"Failed to download \"{attachment_url}\"")
