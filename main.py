@@ -117,7 +117,7 @@ async def main():
 
         thread.join()
 
-    print("\nDone")
+    print("\rDone", end="")
 
 
 if __name__ == "__main__":
