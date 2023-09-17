@@ -45,9 +45,9 @@ async def main():
     thread_id = res["posts"][0]["no"]
 
     # Sanitize thread name for folder name
-    thread_name = res["posts"][0]["sub"]
+    thread_name = res["posts"][0].get("sub", res["posts"][0]["com"])
     thread_name = thread_name.replace("/", "-")
-    thread_name = re.match(r"[a-zA-Z0-9 ]+", thread_name).group(0).strip()
+    thread_name = re.match(r"[a-zA-Z0-9 -]+", thread_name).group(0).strip()
     print(thread_name)
  
 
