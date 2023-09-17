@@ -80,7 +80,8 @@ async def main():
 
     # Sanitize thread name for folder name
     thread_name:str = initial_post.get("sub", initial_post.get("com", "Unnamed thread"))
-    thread_name = re.sub(r"\\/:\*\?<>\|", "", thread_name)
+    thread_name = thread_name.replace("<br>", " ")
+    thread_name = re.sub(r"[\\\/:\*\?<>\|]", "", thread_name).strip()
  
     path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
     print(f"Scraping \"{thread_name}\"")
