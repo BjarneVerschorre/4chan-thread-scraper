@@ -4,6 +4,8 @@ import asyncio
 import threading
 import httpx
 
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
+
 
 def get_thread_info(url:str):
     """ Returns the board and thread info url from a 4chan thread url """
@@ -40,25 +42,26 @@ async def main():
     thread_url = input("4chan thread url: ")
 
     board, thread_info_url = get_thread_info(thread_url)
-    res = httpx.get(thread_info_url).json()
+    thread_data:dict = httpx.get(thread_info_url).json()
 
-    thread_id = res["posts"][0]["no"]
+    initial_post:dict = thread_data["posts"][0]
+    thread_id:int = initial_post["no"]
 
     # Sanitize thread name for folder name
-    thread_name = res["posts"][0].get("sub", res["posts"][0]["com"])
+    thread_name:str = initial_post.get("sub", initial_post.get("com", "Unnamed thread"))
     thread_name = thread_name.replace("/", "-")
     thread_name = re.match(r"[a-zA-Z0-9 -]+", thread_name).group(0).strip()
-    print(thread_name)
  
+    thread_posts:list[dict] = thread_data.get("posts", [])
 
     attachment_urls = []
-    for post in res["posts"]:
+    for post in thread_posts:
         if not "tim" in post:
             continue
         attachment_urls.append(attachment_url(board, str(post["tim"]) + post["ext"]))
 
     print(f"Found {len(attachment_urls)} attachments")
-    path = f"attachments/{board}/{thread_id} - {thread_name}"
+    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
 
     os.makedirs(path, exist_ok=True)
 
