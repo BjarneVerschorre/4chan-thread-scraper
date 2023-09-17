@@ -10,6 +10,13 @@ SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 # Types
+class URL(str):
+    """ A string that represents a url """
+    def __new__(cls, url:str):
+        if not re.match(r"^https?://", url):
+            raise ValueError("Invalid url")
+        return str.__new__(cls, url)
+    
 THREAD_POST = typing.TypedDict(
     "ThreadPost", 
     {
@@ -20,7 +27,6 @@ THREAD_POST = typing.TypedDict(
        "ext": typing.NotRequired[str],
 
     })
-URL = typing.NewType("URL", str)
 BOARD = typing.NewType("BOARD", str)
 THREAD_DATA = typing.NewType("THREAD_DATA", dict)
 
