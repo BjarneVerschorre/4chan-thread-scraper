@@ -80,12 +80,7 @@ async def main():
 
     # Sanitize thread name for folder name
     thread_name:str = initial_post.get("sub", initial_post.get("com", "Unnamed thread"))
-    thread_name_match = re.match(r"[a-zA-Z0-9 -]+", thread_name)
-
-    if thread_name_match:
-        thread_folder_name = thread_name_match.group(0).strip()
-    else:
-        thread_folder_name = "Unnamed thread"
+    thread_name = re.sub(r"\\/:\*\?<>\|", "", thread_name)
  
     print(f"Scraping \"{thread_name}\"")
 
@@ -98,7 +93,7 @@ async def main():
         attachment_urls.append(attachment_url(board, str(post["tim"]) + post["ext"]))
 
     print(f"Found {len(attachment_urls)} attachments")
-    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_folder_name}"
+    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
 
     os.makedirs(path, exist_ok=True)
     
