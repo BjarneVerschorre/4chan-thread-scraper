@@ -23,7 +23,7 @@ def save_attachment(attachment_data: bytes, path:str, file_name: str):
     with open(f"{path}/{file_name}", "wb") as f:
         f.write(attachment_data)
 
-    print(f"\rDownloaded \"{file_name}\"")
+    print(f"\rDownloaded \"{file_name}\"", end="")
 
 async def download_attachment(client: httpx.AsyncClient, path:str, attachment_url:str):
     res = await client.get(attachment_url)
@@ -66,7 +66,7 @@ async def main():
         tasks = [download_attachment(client, path, attachment_url) for attachment_url in attachment_urls]
         await asyncio.gather(*tasks)
 
-    print("Done")
+    print("\nDone")
 
 
 
