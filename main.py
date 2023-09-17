@@ -8,7 +8,6 @@ import httpx
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
-
 # Types
 class URL(str):
     """ A string that represents a url """
@@ -30,6 +29,8 @@ THREAD_POST = typing.TypedDict(
 BOARD = typing.NewType("BOARD", str)
 THREAD_DATA = typing.NewType("THREAD_DATA", dict)
 
+
+# Functions
 def get_thread_info(url:URL) -> tuple[BOARD, URL]:
     """ Returns the board and thread info url from a 4chan thread url """
     a = re.match(r"https://boards.4chan.org/(\w+)/thread/(\d+)", url)
@@ -77,13 +78,13 @@ async def main():
     thread_name_match = re.match(r"[a-zA-Z0-9 -]+", thread_name)
 
     if thread_name_match:
-        thread_name = thread_name_match.group(0)
+        thread_name = thread_name_match.group(0).strip()
     else:
         thread_name = "Unnamed thread"
  
     thread_posts:list[THREAD_POST] = thread_data.get("posts", [])
 
-    attachment_urls = []
+    attachment_urls: list[URL] = []
     for post in thread_posts:
         if not "tim" in post or not "ext" in post:
             continue
@@ -93,13 +94,12 @@ async def main():
     path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
 
     os.makedirs(path, exist_ok=True)
-
+    
     async with httpx.AsyncClient() as client:
         tasks = [download_attachment(client, path, attachment_url) for attachment_url in attachment_urls]
         await asyncio.gather(*tasks)
 
     print("\nDone")
-
 
 
 if __name__ == "__main__":
