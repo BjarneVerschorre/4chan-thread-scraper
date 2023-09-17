@@ -5,8 +5,9 @@ import asyncio
 import threading
 import httpx
 
+# Constants
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
-
+REQUEST_TIMEOUT = 15
 
 # Types
 class URL(str):
@@ -55,7 +56,7 @@ def save_attachment(attachment_data: bytes, path:str, file_name: str):
 
 async def download_attachment(client: httpx.AsyncClient, path:str, attachment_url:URL):
     try:
-        res = await client.get(attachment_url, timeout=15)
+        res = await client.get(attachment_url, timeout=REQUEST_TIMEOUT)
     except (httpx.ReadTimeout, httpx.ConnectTimeout):
         print(f"Failed to download \"{attachment_url}\"")
         return
