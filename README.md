@@ -2,7 +2,7 @@
  Scrape a 4chan thread for attachments
 
 ## Requirements
-This script uses [httpx](https://www.python-httpx.org/) to send requests and needs to be installed. <br>
+This script uses [HTTPX](https://www.python-httpx.org/) to send HTTP requests and needs to be installed. <br>
 `pip3 install -r requirements.txt` to install all the requirements.
 
 ## How to use
