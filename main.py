@@ -100,13 +100,13 @@ async def main():
                 thread_url = f"https://boards.4chan.org/{board}/thread/{thread.split(' - ')[0]}"
                 thread_urls.append(URL(thread_url))
 
-        print(f"Found {len(thread_urls)} thread{'s' if len(thread_urls) != 1 else ''} to refresh\n")
+        print(f"Found {len(thread_urls)} thread{'s' if len(thread_urls) != 1 else ''} to refresh")
     
     for thread_url in thread_urls:
 
         board, thread_info_url = get_thread_info(thread_url)
         response = httpx.get(thread_info_url)
-        
+
         if response.status_code != 200:
             print(f"Failed to get thread data from \"{thread_info_url}\"")
             continue
@@ -125,7 +125,7 @@ async def main():
         thread_name = thread_name[:50] + ' [...]' if len(thread_name) >= 50 else thread_name
     
         path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
-        print(f"Scraping \"{thread_name}\"")
+        print(f"\nScraping \"{thread_name}\"")
 
         thread_posts:list[THREAD_POST] = thread_data.get("posts", [])
 
