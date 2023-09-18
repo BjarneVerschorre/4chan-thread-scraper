@@ -105,7 +105,13 @@ async def main():
     for thread_url in thread_urls:
 
         board, thread_info_url = get_thread_info(thread_url)
-        thread_data:THREAD_DATA = httpx.get(thread_info_url).json()
+        response = httpx.get(thread_info_url)
+        
+        if response.status_code != 200:
+            print(f"Failed to get thread data from \"{thread_info_url}\"")
+            continue
+
+        thread_data:THREAD_DATA = response.json()
 
         initial_post:THREAD_POST = thread_data["posts"][0]
         thread_id:int = initial_post["no"]
