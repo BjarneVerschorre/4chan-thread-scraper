@@ -3,6 +3,7 @@ import re
 import typing
 import asyncio
 import threading
+import argparse
 import httpx
 
 # Constants
@@ -12,11 +13,19 @@ REQUEST_TIMEOUT = 15
 # Types
 class URL(str):
     """ A string that represents a url """
+    _REGEXES = {
+        "thread": re.compile(r"^https?:\/\/boards\.4chan(?:nel)?\.org\/[a-zA-Z0-9]{1,3}\/thread\/\d{7,9}$"),
+        "attachment": re.compile(r"^https?:\/\/i\.4cdn\.org\/[a-zA-Z0-9]{1,3}\/\d{16,18}(\.png|\.jpg|\.webm|\.jpeg|\.gif)$"),
+        "data": re.compile(r"^https?:\/\/a\.4cdn\.org\/[a-zA-Z0-9]{1,3}\/thread\/\d{7,9}\.json$")
+    }
+
     def __new__(cls, url:str):
-        if not re.match(r"^https?://", url):
-            raise ValueError("Invalid url")
-        return str.__new__(cls, url)
-    
+        for regex in cls._REGEXES.values():
+            if regex.match(url):
+                return str.__new__(cls, url)
+        raise ValueError("Invalid (4chan releated) url")
+
+
 THREAD_POST = typing.TypedDict(
     "ThreadPost", 
     {
@@ -30,11 +39,18 @@ THREAD_POST = typing.TypedDict(
 BOARD = typing.NewType("BOARD", str)
 THREAD_DATA = typing.NewType("THREAD_DATA", dict)
 
+# Argparse
+parser = argparse.ArgumentParser(prog="4chan Thread Scraper",description='Process some integers.')
+
+parser.add_argument('-u', '--url', help='An 4chan thread URL to scrape', type=URL)
+parser.add_argument('-r', '--refresh', action='store_true', help="Looks through the attachments/ folder and redownloads any new attachments.")
+
+args = parser.parse_args()
 
 # Functions
 def get_thread_info(url:URL) -> tuple[BOARD, URL]:
     """ Returns the board and thread info url from a 4chan thread url """
-    a = re.match(r"https://boards.4chan.org/(\w+)/thread/(\d+)", url)
+    a = re.match(r"https:\/\/boards\.4chan(?:nel)?\.org\/(\w+)\/thread\/(\d+)", url)
     if not a or len(a.groups()) != 2:
         raise ValueError("Invalid 4chan thread url")
     
@@ -70,55 +86,75 @@ async def download_attachment(client: httpx.AsyncClient, path:str, attachment_ur
 
 
 async def main():
-    thread_url = URL(input("4chan thread url: "))
-
-    board, thread_info_url = get_thread_info(thread_url)
-    thread_data:THREAD_DATA = httpx.get(thread_info_url).json()
-
-    initial_post:THREAD_POST = thread_data["posts"][0]
-    thread_id:int = initial_post["no"]
-
-    # Sanitize thread name for folder name
-    thread_name:str = initial_post.get("sub", initial_post.get("com", "Unnamed thread"))
-    thread_name = re.sub(r'<[^>]+>', ' ', thread_name).replace("/", " ")
-    thread_name = re.sub(r'\s+', ' ', thread_name).strip()
-    thread_name = re.sub(r"[\\\/:\*\?<>\|]", "", thread_name).strip()
- 
-    path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
-    print(f"Scraping \"{thread_name}\"")
-
-    thread_posts:list[THREAD_POST] = thread_data.get("posts", [])
-
-    attachment_urls: list[URL] = []
-    for post in thread_posts:
-        if not "tim" in post or not "ext" in post:
-            continue
-
-        file_name = str(post["tim"]) + post["ext"]
-
-        if os.path.isfile(f"{path}/{file_name}"):
-            continue
-
-        attachment_urls.append(attachment_url(board, file_name))
-
-    print(f"Found {len(attachment_urls)} (new) attachment{'s' if len(attachment_urls) != 1 else ''}")
-
-    os.makedirs(path, exist_ok=True)
+    if not args.url and not args.refresh:
+        parser.print_help()
+        return
     
-    async with httpx.AsyncClient() as client:
-        tasks = [download_attachment(client, path, attachment_url) for attachment_url in attachment_urls]
-        await asyncio.gather(*tasks)
+    thread_urls: list[URL] = []
+    
+    if args.url:
+        thread_urls.append(URL(args.url))
+    else:
+        for board in os.listdir(f"{SCRIPT_PATH}/attachments/"):
+            for thread in os.listdir(f"{SCRIPT_PATH}/attachments/{board}/"):
+                thread_url = f"https://boards.4chan.org/{board}/thread/{thread.split(' - ')[0]}"
+                thread_urls.append(URL(thread_url))
 
-    # Wait until all threads are done
-    for thread in threading.enumerate():
-        if thread is threading.main_thread():
-            continue
-        if thread.name.startswith("asyncio_"):
-            continue
+        print(f"Found {len(thread_urls)} thread{'s' if len(thread_urls) != 1 else ''} to refresh\n")
+    
+    for thread_url in thread_urls:
 
-        thread.join()
+        board, thread_info_url = get_thread_info(thread_url)
+        thread_data:THREAD_DATA = httpx.get(thread_info_url).json()
 
-    print("\nDone")
+        initial_post:THREAD_POST = thread_data["posts"][0]
+        thread_id:int = initial_post["no"]
+
+        # Sanitize thread name for folder name
+        thread_name:str = initial_post.get("sub", initial_post.get("com", "Unnamed thread"))
+        thread_name = re.sub(r'<[^>]+>', ' ', thread_name).replace("/", " ")
+        thread_name = re.sub(r'\s+', ' ', thread_name).strip()
+        thread_name = re.sub(r"[\\\/:\*\?<>\|]", "", thread_name).strip()
+
+        thread_name = thread_name[:50] + ' [...]' if len(thread_name) >= 50 else thread_name
+    
+        path = f"{SCRIPT_PATH}/attachments/{board}/{thread_id} - {thread_name}"
+        print(f"Scraping \"{thread_name}\"")
+
+        thread_posts:list[THREAD_POST] = thread_data.get("posts", [])
+
+        attachment_urls: list[URL] = []
+        for post in thread_posts:
+            if not "tim" in post or not "ext" in post:
+                continue
+
+            file_name = str(post["tim"]) + post["ext"]
+
+            if os.path.isfile(f"{path}/{file_name}"):
+                continue
+
+            attachment_urls.append(attachment_url(board, file_name))
+
+        print(f"Found {len(attachment_urls)} (new) attachment{'s' if len(attachment_urls) != 1 else ''}")
+
+        os.makedirs(path, exist_ok=True)
+        
+        async with httpx.AsyncClient() as client:
+            tasks = [download_attachment(client, path, attachment_url) for attachment_url in attachment_urls]
+            await asyncio.gather(*tasks)
+
+        # Wait until all threads are done
+        for thread in threading.enumerate():
+            if thread is threading.main_thread():
+                continue
+            if thread.name.startswith("asyncio_"):
+                continue
+
+            thread.join()
+        
+        print()
+
+    print("Done")
 
 
 if __name__ == "__main__":
