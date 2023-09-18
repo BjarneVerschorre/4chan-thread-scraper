@@ -6,5 +6,15 @@ This script uses [HTTPX](https://www.python-httpx.org/) to send HTTP requests as
 `pip3 install -r requirements.txt` to install all the requirements.
 
 ## 🖥️ How to use
-Just run the script by doing `python main.py` while in the directory and it will ask you for an URL. <br>
-The attachments will be saved in a (new) directory `attachments/<board>/<thread>`.
+To scrape a thread, use the `-u <URL>` or `--url <URL>` option. <br>
+You can refresh (check for new ones) the attachments by using the `-r` or `--refresh` option.
+```
+usage: 4chan Thread Scraper [-h] [-u URL] [-r]
+
+Process some integers.
+
+options:
+  -h, --help         show this help message and exit
+  -u URL, --url URL  An 4chan thread URL to scrape
+  -r, --refresh      Looks through the attachments/ folder and redownloads any new attachments.
+```
