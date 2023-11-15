@@ -14,6 +14,7 @@ REQUEST_TIMEOUT = 15
 class URL(str):
     """ A string that represents a url """
     _REGEXES = {
+        "short": re.compile(r'^(?:\/)?[a-zA-Z0-9]{1,3}\/thread\/\d{7,9}(?:\/)?$'),
         "thread": re.compile(r"^https?:\/\/boards\.4chan(?:nel)?\.org\/[a-zA-Z0-9]{1,3}\/thread\/\d{7,9}$"),
         "attachment": re.compile(r"^https?:\/\/i\.4cdn\.org\/[a-zA-Z0-9]{1,3}\/\d{16,18}(\.png|\.jpg|\.webm|\.jpeg|\.gif)$"),
         "data": re.compile(r"^https?:\/\/a\.4cdn\.org\/[a-zA-Z0-9]{1,3}\/thread\/\d{7,9}\.json$")
@@ -23,7 +24,7 @@ class URL(str):
         for regex in cls._REGEXES.values():
             if regex.match(url):
                 return str.__new__(cls, url)
-        raise ValueError("Invalid (4chan releated) url")
+        raise ValueError(f"'{url}' is an invalid (4chan releated) url")
 
 
 THREAD_POST = typing.TypedDict(
@@ -40,22 +41,21 @@ BOARD = typing.NewType("BOARD", str)
 THREAD_DATA = typing.NewType("THREAD_DATA", dict)
 
 # Argparse
-parser = argparse.ArgumentParser(prog="4chan Thread Scraper",description='Process some integers.')
+parser = argparse.ArgumentParser(prog="4chan Thread Scraper")
 
 parser.add_argument('-u', '--url', help='An 4chan thread URL to scrape', type=URL)
 parser.add_argument('-r', '--refresh', action='store_true', help="Looks through the attachments/ folder and redownloads any new attachments.")
+parser.add_argument('-f', '--file', help="A file containing 4chan thread urls to scrape", type=argparse.FileType('r'))
 
 args = parser.parse_args()
 
 # Functions
 def get_thread_info(url:URL) -> tuple[BOARD, URL]:
     """ Returns the board and thread info url from a 4chan thread url """
-    a = re.match(r"https:\/\/boards\.4chan(?:nel)?\.org\/(\w+)\/thread\/(\d+)", url)
-    if not a or len(a.groups()) != 2:
-        raise ValueError("Invalid 4chan thread url")
+    url_info = re.search(r"([a-zA-Z0-9]{1,3})\/thread\/(\d{7,9})", url)
     
-    board = BOARD(a.group(1))
-    thread_id = a.group(2)
+    board = BOARD(url_info.group(1))
+    thread_id = url_info.group(2)
     thread_info_url = URL(f"https://a.4cdn.org/{board}/thread/{thread_id}.json")
 
     return board, thread_info_url
@@ -84,9 +84,8 @@ async def download_attachment(client: httpx.AsyncClient, path:str, attachment_ur
     file_name = attachment_url.split("/")[-1]
     threading.Thread(target=save_attachment, args=(res.content, path, file_name)).start()
 
-
 async def main():
-    if not args.url and not args.refresh:
+    if not args.url and not args.refresh and not args.file:
         parser.print_help()
         return
     
@@ -94,21 +93,38 @@ async def main():
     
     if args.url:
         thread_urls.append(URL(args.url))
-    else:
+
+    if args.refresh:
         for board in os.listdir(f"{SCRIPT_PATH}/attachments/"):
             for thread in os.listdir(f"{SCRIPT_PATH}/attachments/{board}/"):
                 thread_url = f"https://boards.4chan.org/{board}/thread/{thread.split(' - ')[0]}"
                 thread_urls.append(URL(thread_url))
 
-        print(f"Found {len(thread_urls)} thread{'s' if len(thread_urls) != 1 else ''} to refresh")
+    if args.file:
+        for line in args.file.readlines():
+            if not line.strip():
+                continue
+            thread_urls.append(URL(line.strip()))
     
+    print(f"Found {len(thread_urls)} thread{'s' if len(thread_urls) != 1 else ''} to scrape.")
+
     for thread_url in thread_urls:
+
+        # check if failed_threads.txt exists and has the thread url
+        if os.path.isfile('failed_threads.txt'):
+            with open('failed_threads.txt', 'r') as f:
+                if thread_url in f.read():
+                    continue
 
         board, thread_info_url = get_thread_info(thread_url)
         response = httpx.get(thread_info_url)
 
         if response.status_code != 200:
             print(f"Failed to get thread data from \"{thread_info_url}\"")
+
+            with open('failed_threads.txt', 'a') as f:
+                f.write(f"{thread_url}\n")
+
             continue
 
         thread_data:THREAD_DATA = response.json()
