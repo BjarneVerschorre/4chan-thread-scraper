@@ -43,9 +43,9 @@ THREAD_DATA = typing.NewType("THREAD_DATA", dict)
 # Argparse
 parser = argparse.ArgumentParser(prog="4chan Thread Scraper")
 
-parser.add_argument('-u', '--url', help='An 4chan thread URL to scrape', type=URL)
+parser.add_argument('-u', '--url', help='An 4chan thread URL to scrape.', type=URL)
 parser.add_argument('-r', '--refresh', action='store_true', help="Looks through the attachments/ folder and redownloads any new attachments.")
-parser.add_argument('-f', '--file', help="A file containing 4chan thread urls to scrape", type=argparse.FileType('r'))
+parser.add_argument('-f', '--file', help="A file containing 4chan thread urls to scrape.", type=argparse.FileType('r'))
 
 args = parser.parse_args()
 
