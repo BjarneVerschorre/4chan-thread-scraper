@@ -11,10 +11,9 @@ You can refresh (check for new ones) the attachments by using the `-r` or `--ref
 ```
 usage: 4chan Thread Scraper [-h] [-u URL] [-r]
 
-Process some integers.
-
 options:
-  -h, --help         show this help message and exit
-  -u URL, --url URL  An 4chan thread URL to scrape
+  -h, --help         show this help message and exit.
+  -u URL, --url URL  An 4chan thread URL to scrape.
   -r, --refresh      Looks through the attachments/ folder and redownloads any new attachments.
+  -f FILE, --file FILE  A file containing 4chan thread urls to scrape.
 ```
